@@ -1,0 +1,47 @@
+#! /bin/bash
+
+usage() {
+    echo 'Convert between bases.'
+    echo
+    echo 'Usage: bac [options] <expr>'
+    echo
+    echo 'Options:'
+    echo '  -i <inbase>   Input base [default: 10].'
+    echo '  -o <outbase>  Output base [default: 6].'
+    echo '  -d            Set output base to decimal (10).'
+    echo '  -D            Set output base to duodecimal (12).'
+    echo '  -s            Set input base to senary (6).'
+    echo '  -h            Show this help screen.'
+}
+
+# set default in and out bases
+inbase=10
+outbase=6
+
+OPTIND=1
+while getopts 'h?i:o:dDs' opt; do
+    case "$opt" in
+        h|\?)
+            usage
+            exit 0
+            ;;
+        i)  inbase=$OPTARG;;
+        o)  outbase=$OPTARG;;
+        d)  outbase=10;;
+        D)  outbase=12;;
+        s)  inbase=6;;
+    esac
+done
+shift $((OPTIND - 1))
+[ "${1:-}" = "--" ] && shift
+
+# obase changes base interpretation
+bases="obase=$outbase; ibase=$inbase"
+
+if [ $# -lt 1 ] ; then
+    (echo "$bases" && cat) | bc
+else
+    # echo "obase=$outbase; ibase=$inbase; $1" | bc
+    bc <<< "$bases; $1"
+fi
+
