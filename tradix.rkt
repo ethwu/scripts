@@ -17,13 +17,13 @@
 
 ; Convert n to a list of digits in the given radix.
 (define/contract (number->digits num [radix 10])
-                 ((natural-number/c) (radix/c) . ->* . digits/c)
-                 (let loop ([num num] [acc '()])
-                   (cond
-                     [(zero? num) (if (empty? acc) '(0) acc)]
-                     [else
-                      (define-values (q r) (quotient/remainder num radix))
-                      (loop q (cons r acc))])))
+  ((natural-number/c) (radix/c) . ->* . digits/c)
+  (let loop ([num num] [acc '()])
+    (cond
+      [(zero? num) (if (empty? acc) '(0) acc)]
+      [else
+       (define-values (q r) (quotient/remainder num radix))
+       (loop q (cons r acc))])))
 
 ; Build an alphabet. Returns a lambda with two arguments, `output?` and `digit`.
 ; If `output?` is true, then the lambda will look up the string corresponding to
@@ -31,21 +31,21 @@
 ; If `outupt?` is false, then the lambda will take the passed digit string and
 ; find the corresponding integer.
 (define/contract (make-alphabet available)
-                 (list? . -> . alphabet/c)
-                 (lambda (output? digit)
-                   (if output?
-                       (if ((integer-in 0 (length available)) digit) (list-ref available digit) #\?)
-                       (index-of available digit))))
+  (list? . -> . alphabet/c)
+  (lambda (output? digit)
+    (if output?
+        (if ((integer-in 0 (length available)) digit) (list-ref available digit) #\?)
+        (index-of available digit))))
 
 ; Cast a string of single-character digits to an alphabet. The strings ".", "(", and ")" are reserved,
 ; and will be replaced with "?". You should not use "?" in an alphabet.
 (define/contract (string->alphabet str)
-                 (string? . -> . alphabet/c)
-                 (make-alphabet (map (lambda (c)
-                                       (case c
-                                         [(#\. #\( #\)) #\?]
-                                         [else c]))
-                                     (string->list str))))
+  (string? . -> . alphabet/c)
+  (make-alphabet (map (lambda (c)
+                        (case c
+                          [(#\. #\( #\)) #\?]
+                          [else c]))
+                      (string->list str))))
 
 ; The default alphabet.
 (define default-alphabet
@@ -58,25 +58,29 @@
 ; Dozenal alphabet using lowercase tau and epsilon for ten and eleven.
 (define tau-epsilon (make-alphabet '(0 1 2 3 4 5 6 7 8 9 τ ε)))
 
+; The alphabet used in Base64.
+(define base64 (string->alphabet "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"))
+
 ; Get alphabet according to its specifier, or define a new alphabet.
 (define/contract (get-alphabet specifier)
-                 ((or/c alphabet/c string?) . -> . alphabet/c)
-                 (if (procedure? specifier)
-                     specifier
-                     (case specifier
-                       [("default") default-alphabet]
-                       [("pitman") pitman]
-                       [("delta-epsilon") delta-epsilon]
-                       [("tau-epsilon") tau-epsilon]
-                       [else (string->alphabet specifier)])))
+  ((or/c alphabet/c string?) . -> . alphabet/c)
+  (if (procedure? specifier)
+      specifier
+      (case specifier
+        [("default") default-alphabet]
+        [("pitman") pitman]
+        [("delta-epsilon") delta-epsilon]
+        [("tau-epsilon") tau-epsilon]
+        [("base64") base64]
+        [else (string->alphabet specifier)])))
 
 ; Convert a list of digits to a string using the given alphabet.
 (define/contract (digits->string digits [alphabet default-alphabet])
-                 ((digits/c) (alphabet/c) . ->* . string?)
-                 (let loop ([digits digits] [acc ""])
-                   (cond
-                     [(empty? digits) acc]
-                     [else (loop (cdr digits) (format "~a~a" acc (alphabet #t (car digits))))])))
+  ((digits/c) (alphabet/c) . ->* . string?)
+  (let loop ([digits digits] [acc ""])
+    (cond
+      [(empty? digits) acc]
+      [else (loop (cdr digits) (format "~a~a" acc (alphabet #t (car digits))))])))
 
 (module+ main
   ; The input radix. Defaults to ten.
@@ -122,12 +126,12 @@
                output_radix
                "Specify the output radix. Must be at least 2. [default: 10]"
                (output-radix (string->number output_radix))]
-   [("-b" "--binary") "Binary (base 2)." (output-radix 2)]
-   [("-s" "--senary") "Senary (base 6)." (output-radix 6)]
-   [("--octal") "Octal (base 8)." (output-radix 8)]
-   [("-d" "--dozenal" "--duodecimal") "Dozenal (base 12)." (output-radix 12)]
-   [("-x" "--hexadecimal") "Hexadecimal (base 16)." (output-radix 16)]
-   [("--sexagesimal") "Sexagesimal (base 60)." (output-radix 60)]
+   [("-b" "--binary") "Print in binary (base 2)." (output-radix 2)]
+   [("-s" "--senary") "Print in senary (base 6)." (output-radix 6)]
+   [("--octal") "Print in octal (base 8)." (output-radix 8)]
+   [("-d" "--dozenal" "--duodecimal") "Print in dozenal (base 12)." (output-radix 12)]
+   [("-x" "--hexadecimal") "Print in hexadecimal (base 16)." (output-radix 16)]
+   [("--sexagesimal") "Print in sexagesimal (base 60)." (output-radix 60)]
    #:help-labels ""
    "============================== Alphabet Options ==============================="
    "Specify the alphabets used for interpreting and printing. The --input-alphabet"
@@ -137,13 +141,15 @@
    ""
    "  * default       An alphabet that extends the Hindu–Arabic numeral system with"
    "                  lowercase Latin letters for 10 through 35 and uppercase Latin"
-   "                  letters for 36 through 61. Supports any base up to 62."
+   "                  letters for 36 through 61. Supports any radix up to 62."
    "  * pitman        An alphabet that uses Isaac Pitman’s dozenal numerals for ten"
-   "                  and eleven, '↊' and '↋'. Supports any base up to 12."
+   "                  and eleven, '↊' and '↋'. Supports any radix up to 12."
    "  * delta-epsilon An alphabet that uses lowercase delta 'δ' and epsilon 'ε' for"
-   "                  ten and eleven. Supports any base up to 12."
+   "                  ten and eleven. Supports any radix up to 12."
    "  * tau-epsilon   An alphabet that uses lowercase tau 'τ' and epsilon 'ε' for"
-   "                  ten and eleven. Supports any base up to 12."
+   "                  ten and eleven. Supports any radix up to 12."
+   "  * base64        The alphabet used by the Base64 encoding scheme. Does not"
+   "                  pad. Supports any radix up to 64."
    ""
    #:once-any
    [("-A" "--input-alphabet") alphabet "Specify the input alphabet." (input-alphabet alphabet)]
@@ -159,6 +165,10 @@
     "Interpret tau–epsilon-style dozenal numerals. Implies --Dozenal."
     (input-radix 12)
     (input-alphabet tau-epsilon)]
+   [("--Base64")
+    "Interpret using Base64. Implies --input-radix 64."
+    (input-radix 64)
+    (input-alphabet base64)]
    #:help-labels ""
    #:once-any
    [("-a" "--output-alphabet") alphabet "Specify the output alphabet. " (output-alphabet alphabet)]
@@ -174,6 +184,10 @@
     "Print using tau–epsilon-style dozenal numerals. Implies --dozenal."
     (output-radix 12)
     (output-alphabet tau-epsilon)]
+   [("--base64")
+    "Interpret using Base64. Implies --output-radix 64."
+    (output-radix 64)
+    (output-alphabet base64)]
    #:help-labels ""
    #:once-any
    [("-l" "--list") "Print the converted number as a list of place values." (output-format "list")]
