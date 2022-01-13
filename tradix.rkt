@@ -13,89 +13,144 @@
 
 ; Convert n to a list of digits in the given radix.
 (define/contract (number->digits num [radix 10])
-                 ((natural-number/c) (exact-positive-integer?) . ->* . (listof natural-number/c))
-                 (let loop ([num num] [acc '()])
-                   (cond
-                     [(zero? num) (if (empty? acc) '(0) acc)]
-                     [else
-                      (define-values (q r) (quotient/remainder num radix))
-                      (loop q (cons r acc))])))
+  ((natural-number/c) (exact-positive-integer?) . ->* . (listof natural-number/c))
+  (let loop ([num num] [acc '()])
+    (cond
+      [(zero? num) (if (empty? acc) '(0) acc)]
+      [else
+       (define-values (q r) (quotient/remainder num radix))
+       (loop q (cons r acc))])))
 
-; Build an alphabet. Returns `?` when the passed index is out of bounds.
+; Build an alphabet. Returns a lambda with two arguments, `output?` and `digit`.
+; If `output?` is true, then the lambda will look up the string corresponding to
+; the passed digit, or "?" if the digit is not available in the alphabet.
+; If `outupt?` is false, then the lambda will take the passed digit string and
+; find the corresponding integer.
 (define (make-alphabet available)
-  (lambda (digit) (if (< digit (length available)) (list-ref available digit) #\?)))
+  (lambda (output? digit)
+    (if output?
+        (if ((integer-in 0 (length available)) digit) (list-ref available digit) #\?)
+        (index-of available digit))))
+
+; Cast a string of single-character digits to an alphabet. The strings ".", "(", and ")" are reserved,
+; and will be replaced with "?". You should not use "?" in an alphabet.
+(define (string->alphabet str)
+  (make-alphabet (map (lambda (c)
+                        (case c
+                          [(#\. #\( #\)) #\?]
+                          [else c]))
+                      (string->list str))))
 
 ; The default alphabet.
 (define default-alphabet
-  (make-alphabet (string->list "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")))
+  (string->alphabet "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"))
 
 ; Dozenal alphabet using the Unicode Pitman numerals for ten and eleven.
-(define dozenal-pitman (make-alphabet '(0 1 2 3 4 5 6 7 8 9 ↊ ↋)))
+(define pitman (make-alphabet '(0 1 2 3 4 5 6 7 8 9 ↊ ↋)))
+
+; Get alphabet according to its specifier, or define a new alphabet.
+(define (get-alphabet specifier)
+  (if (procedure? specifier)
+      specifier
+      (case specifier
+        [("default") default-alphabet]
+        [("pitman") pitman]
+        [else (string->alphabet specifier)])))
 
 ; Convert a list of digits to a string using the given alphabet.
 (define/contract (digits->string digits [alphabet default-alphabet])
-                 (((listof natural-number/c)) ((procedure-arity-includes/c 1)) . ->* . string?)
-                 (let loop ([digits digits] [acc ""])
-                   (cond
-                     [(empty? digits) acc]
-                     [else (loop (cdr digits) (format "~a~a" acc (alphabet (car digits))))])))
+  (((listof natural-number/c)) ((procedure-arity-includes/c 2)) . ->* . string?)
+  (let loop ([digits digits] [acc ""])
+    (cond
+      [(empty? digits) acc]
+      [else (loop (cdr digits) (format "~a~a" acc (alphabet #t (car digits))))])))
 
 ; The input radix. Defaults to ten.
 (define input-radix (make-parameter 10))
 ; The output radix. Defaults to ten.
 (define output-radix (make-parameter 10))
 
-; The output format. Defaults to list.
+; The input alphabet.
+(define input-alphabet (make-parameter default-alphabet))
+
+; The output format. Defaults to num.
 (define output-format (make-parameter "num"))
 ; The output alphabet.
-(define output-alphabet (make-parameter "default"))
+(define output-alphabet (make-parameter default-alphabet))
 
 (module+ main
   (command-line
    #:program (short-program+command-name)
-   #:once-any ;
-   [("-i" "--input-radix")
-    input_radix ;
-    "The input base. [default: 10]"
-    (input-radix (string->number input_radix))]
-   [("-B" "--Binary") "Binary (base 2)." (input-radix 2)]
-   [("-S" "--Senary") "Senary (base 6)." (input-radix 6)]
-   [("--Octal") "Octal (base 8)." (input-radix 8)]
-   [("-D" "--Dozenal") "Dozenal (base 12)." (input-radix 12)]
-   [("-X" "--Hexadecimal") "Hexadecimal (base 16)." (input-radix 16)]
-   #:once-any ;
-   [("-o" "--output-radix")
-    output_radix ;
-    "The output base. [default: 10]"
-    (output-radix (string->number output_radix))]
+   #:usage-help ;
+   "Convert between radices. Flags beginning with capital letters correspond to"
+   "input, and flags beginning with lowercase letters correspond to output. Both"
+   "input and output default to decimal. The default alphabet extends the Hindu–"
+   "Arabic numeral system with the lowercase Latin letters for 10 through 35 and"
+   "the uppercase Latin letters for 36 through 61. If no number is given for"
+   "conversion, input will be taken from STDIN."
+   #:ps "\nAll numerals in this help text are in decimal (base 10)."
+   #:help-labels "=============================== Radix Options ================================="
+   "Specify the input and output radices. Both default to decimal (base 10). While"
+   "shortcuts are provided for several common radices, you can also specify a radix"
+   "in decimal using the --input-radix and --output-radix flags."
+   ""
+   #:once-any [("-i" "-I" "--input-radix")
+               input_radix
+               "Specify the input radix. [default: 10]"
+               (input-radix (string->number input_radix))]
+   [("-B" "--Binary") "Take input in binary (base 2)." (input-radix 2)]
+   [("-S" "--Senary") "Take input in senary (base 6)." (input-radix 6)]
+   [("--Octal") "Take input in octal (base 8)." (input-radix 8)]
+   [("-D" "--Dozenal" "--Duodecimal") "Take input in dozenal (base 12)." (input-radix 12)]
+   [("-X" "--Hexadecimal") "Take input in hexadecimal (base 16)." (input-radix 16)]
+   #:help-labels ""
+   #:once-any [("-o" "--output-radix")
+               output_radix
+               "Specify the output radix. [default: 10]"
+               (output-radix (string->number output_radix))]
    [("-b" "--binary") "Binary (base 2)." (output-radix 2)]
    [("-s" "--senary") "Senary (base 6)." (output-radix 6)]
    [("--octal") "Octal (base 8)." (output-radix 8)]
-   [("-d" "--dozenal") "Dozenal (base 12)." (output-radix 12)]
+   [("-d" "--dozenal" "--duodecimal") "Dozenal (base 12)." (output-radix 12)]
    [("-x" "--hexadecimal") "Hexadecimal (base 16)." (output-radix 16)]
    [("--sexagesimal") "Sexagesimal (base 60)." (output-radix 60)]
-   #:once-any ;
-   [("-l" "--list") "Output as a list of digit values." (output-format "list")]
-   #:once-any ;
-   [("-a" "--alphabet")
-    alphabet ;
-    "Specify the output alphabet."
-    (output-alphabet alphabet)]
+   #:help-labels ""
+   "============================== Alphabet Options ==============================="
+   "Specify the alphabets used for interpreting and printing. The --input-alphabet"
+   "and --output-alphabet flags may take either a string of one-character digits"
+   "that form an alphabet (i.e., '0123456789abcdef') or one of the following"
+   "specifiers:"
+   "  - default   An alphabet that extends the Hindu–Arabic numeral system with"
+   "              lowercase Latin letters for 10 through 35 and uppercase Latin"
+   "              letters for 36 through 61."
+   "  - pitman    An alphabet that uses Isaac Pitman’s dozenal numerals for ten and"
+   "              eleven, '↊' and '↋'."
+   ""
+   #:once-any
+   [("-A" "--input-alphabet") alphabet "Specify the input alphabet." (input-alphabet alphabet)]
+   [("--Pitman")
+    "Interpret Isaac Pitman’s dozenal numerals. Implies --Dozenal."
+    (input-radix 12)
+    (input-alphabet pitman)]
+   #:help-labels ""
+   #:once-any
+   [("-a" "--output-alphabet") alphabet "Specify the output alphabet. " (output-alphabet alphabet)]
    [("--pitman")
-    "Isaac Pitman's dozenal numerals. Implies --dozenal."
+    "Print using Isaac Pitman’s dozenal numerals. Implies --dozenal."
     (output-radix 12)
-    (output-alphabet "dozenal-pitman")]
+    (output-alphabet pitman)]
+   #:help-labels ""
+   #:once-any ;
+   [("-l" "--list") "Print the converted number as a list of place values." (output-format "list")]
+   #:help-labels ""
    #:args ([number #f])
    (let* ([number (string->number (string-trim (if number number (port->string (current-input-port))))
                                   (input-radix))]
           [digits (number->digits number (output-radix))]
-          [alphabet (case (output-alphabet)
-                      [("default") default-alphabet]
-                      [("dozenal-pitman") dozenal-pitman]
-                      [else (make-alphabet (string->list (output-alphabet)))])])
-     (printf "~a~n"
-             (case (output-format)
-               [("num") (digits->string digits alphabet)]
-               [else digits])))
+          [input-alphabet (get-alphabet (input-alphabet))]
+          [output-alphabet (get-alphabet (output-alphabet))])
+     (display (case (output-format)
+                [("num") (digits->string digits output-alphabet)]
+                [else digits])))
    (unless number
      (close-input-port (current-input-port)))))
