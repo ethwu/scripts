@@ -114,24 +114,25 @@
    ""
    #:once-any [("-i" "-I" "--input-radix")
                input_radix
-               "Specify the input radix. Must be between 2 and 16. [default: 10]"
+               "Specify the input radix. Must be between 2 and 16."
                (input-radix (string->number input_radix))]
-   [("-B" "--Binary") "Take input in binary (base 2)." (input-radix 2)]
-   [("-S" "--Senary") "Take input in senary (base 6)." (input-radix 6)]
-   [("--Octal") "Take input in octal (base 8)." (input-radix 8)]
-   [("-D" "--Dozenal" "--Duodecimal") "Take input in dozenal (base 12)." (input-radix 12)]
-   [("-X" "--Hexadecimal") "Take input in hexadecimal (base 16)." (input-radix 16)]
+   [("-B" "--Binary")                             "Interpret as binary.      (Base 2)" (input-radix 2)]
+   [("-S" "--Senary")                             "Interpret as senary.      (Base 6)" (input-radix 6)]
+   [("--Octal")                                   "Interpret as octal.       (Base 8)" (input-radix 8)]
+   [("-D" "--Dozenal" "--Duodecimal" "--Uncial")  "Interpret as dozenal.     (Base 12)" (input-radix 12)]
+   [("-X" "--Hexadecimal")                        "Interpret as hexadecimal. (Base 16)" (input-radix 16)]
    #:help-labels ""
    #:once-any [("-o" "--output-radix")
                output_radix
-               "Specify the output radix. Must be at least 2. [default: 10]"
+               "Specify the output radix. Must be at least 2."
                (output-radix (string->number output_radix))]
-   [("-b" "--binary") "Print in binary (base 2)." (output-radix 2)]
-   [("-s" "--senary") "Print in senary (base 6)." (output-radix 6)]
-   [("--octal") "Print in octal (base 8)." (output-radix 8)]
-   [("-d" "--dozenal" "--duodecimal") "Print in dozenal (base 12)." (output-radix 12)]
-   [("-x" "--hexadecimal") "Print in hexadecimal (base 16)." (output-radix 16)]
-   [("--sexagesimal") "Print in sexagesimal (base 60)." (output-radix 60)]
+   [("-b" "--binary")                             "Print in binary.          (Base 2)" (output-radix 2)]
+   [("-s" "--senary")                             "Print in senary.          (Base 6)" (output-radix 6)]
+   [("--octal")                                   "Print in octal.           (Base 8)" (output-radix 8)]
+   [("-d" "--dozenal" "--duodecimal" "--uncial")  "Print in dozenal.         (Base 12)" (output-radix 12)]
+   [("-x" "--hexadecimal")                        "Print in hexadecimal.     (Base 16)" (output-radix 16)]
+   [("--vigesimal")                               "Print in vigesimal.       (Base 20)" (output-radix 20)]
+   [("--sexagesimal" "--sexagenary")              "Print in sexagesimal.     (Base 60)" (output-radix 60)]
    #:help-labels ""
    "============================== Alphabet Options ==============================="
    "Specify the alphabets used for interpreting and printing. The --input-alphabet"
@@ -154,26 +155,26 @@
    #:once-any
    [("-A" "--input-alphabet") alphabet "Specify the input alphabet." (input-alphabet alphabet)]
    [("--Pitman")
-    "Interpret Isaac Pitman’s dozenal numerals. Implies --Dozenal."
+    "Interpret Isaac Pitman’s dozenal numerals.        Implies --Dozenal."
     (input-radix 12)
     (input-alphabet pitman)]
    [("--Delta-Epsilon")
-    "Interpret delta–epsilon-style dozenal numerals. Implies --Dozenal."
+    "Interpret delta–epsilon-style dozenal numerals.   Implies --Dozenal."
     (input-radix 12)
     (input-alphabet delta-epsilon)]
    [("--Tau-Epsilon")
-    "Interpret tau–epsilon-style dozenal numerals. Implies --Dozenal."
+    "Interpret tau–epsilon-style dozenal numerals.     Implies --Dozenal."
     (input-radix 12)
     (input-alphabet tau-epsilon)]
    [("--Base64")
-    "Interpret using Base64. Implies --input-radix 64."
+    "Interpret using Base64.                           Implies --input-radix 64."
     (input-radix 64)
     (input-alphabet base64)]
    #:help-labels ""
    #:once-any
    [("-a" "--output-alphabet") alphabet "Specify the output alphabet. " (output-alphabet alphabet)]
    [("--pitman")
-    "Print using Isaac Pitman’s dozenal numerals. Implies --dozenal."
+    "Print using Isaac Pitman’s dozenal numerals.      Implies --dozenal."
     (output-radix 12)
     (output-alphabet pitman)]
    [("--delta-epsilon")
@@ -181,11 +182,11 @@
     (output-radix 12)
     (output-alphabet delta-epsilon)]
    [("--tau-epsilon")
-    "Print using tau–epsilon-style dozenal numerals. Implies --dozenal."
+    "Print using tau–epsilon-style dozenal numerals.   Implies --dozenal."
     (output-radix 12)
     (output-alphabet tau-epsilon)]
    [("--base64")
-    "Interpret using Base64. Implies --output-radix 64."
+    "Print using using Base64.                         Implies --output-radix 64."
     (output-radix 64)
     (output-alphabet base64)]
    #:help-labels ""
@@ -198,9 +199,9 @@
           [digits (number->digits number (output-radix))]
           [input-alphabet (get-alphabet (input-alphabet))]
           [output-alphabet (get-alphabet (output-alphabet))])
-     (display (case (output-format)
-                [("num") (digits->string digits output-alphabet)]
-                [else digits])))
+     (displayln (case (output-format)
+                  [("num") (digits->string digits output-alphabet)]
+                  [else digits])))
    (unless number
      (close-input-port (current-input-port)))))
 
