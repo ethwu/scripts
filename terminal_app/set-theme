@@ -1,0 +1,13 @@
+#! /bin/bash
+
+usage="$0 <theme>
+Set the current Terminal.app theme."
+
+if [[ $# -lt 1 ]] ; then
+    echo "$usage"
+    exit 1
+fi
+
+# Set the theme for the current tab.
+exec osascript -e "tell application \"Terminal\" to set current settings of tab 1 of window 1 to settings set \"$*\""
+
