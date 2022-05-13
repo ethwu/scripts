@@ -1,0 +1,14 @@
+#! /bin/sh
+
+# Detect macOS dark mode. Returns true if in dark mode.
+exec test 
+
+if [[ $(defaults read -g AppleInterfaceStyle 2> /dev/null) = 'Dark' ]] ; then
+    theme='Catalina Night'
+else
+    theme='Catalina Day'
+fi
+
+# Set the theme of the newly-opened Terminal tab.
+exec set-theme $theme
+
